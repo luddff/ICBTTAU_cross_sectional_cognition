@@ -20,3 +20,9 @@ for x in columns:
 
 # Now let's do the same for 
 bass_data = pd.read_csv('20220503.csv', encoding='unicode_escape', delimiter=';')
+
+# For standardization and analysis we need edu, YOB, sex, and diagnosis
+bass_columns = bass_data.columns
+
+bass_data = bass_data[['Participant Id', 'ICBTvsTAU-DemV_1a_SCREEN',
+                       'ICBTvsTAU-DemV_1b_SCREEN', 'ICBTvsTAU-DemV_3_SCREEN']]

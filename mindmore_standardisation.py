@@ -41,6 +41,31 @@ class mindmore_standardiser:
             - self.df['CERAD_recall_predicted']) / 1.894
         
         self.df.drop('CERAD_recall_predicted', axis=1, inplace=True)
+    
+    def CORSI_FWD(self):
+        
+        self.df['CORSI_FWD_predicted'] = 5.829 + (self.df['age']*0.017) + \
+            (self.df['age2']*-0.0005) + (self.df['edu']*0.044) + \
+                (self.df['sex']*0.273)
+                
+        self.df['CORSI_FWD_z'] = (self.df['CORSI_FWD_SPAN'] - \
+            self.df['CORSI_FWD_predicted']) / 1.010
+            
+        self.df.drop('CORSI_FWD_predicted', axis=1, inplace=True)
+        
+        df = self.df
+        return df
+    
+    def FAS(self):
+        
+        self.df['FAS_predicted'] = 31.939 + (self.df['edu']*0.921)
+                
+        self.df['FAS_z'] = (self.df['FAS_INDEX'] - \
+            self.df['FAS_predicted']) / 13.577
+            
+        self.df.drop('FAS_predicted', axis=1, inplace=True)
+        
+        df = self.df
+        return df
 
         
-        return self.df

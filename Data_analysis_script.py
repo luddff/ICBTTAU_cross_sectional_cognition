@@ -9,7 +9,7 @@ In order for it to work we need data from three different sources:
     3. Demographic information from BASS for standardization
     
     Furthermore we need normative models from MM paper as well as updated norms
-    for SDMT and Stroop.
+    for SDMT and Stroop. Currently in seperate script (mindmore_standardisation.py)
 
 
 """
@@ -25,7 +25,7 @@ from mindmore_standardisation import mindmore_standardiser
 
 # Let's start of by importing the test data from Mindmore and getting the columns we need
 
-test_data = pd.read_csv('ICBTTAU data 3-5-22.csv')
+test_data = pd.read_csv('ICBTTAU data 10-5-22.csv')
 
 columns = ['BATTERY', 'CLICKRT', 'CTMT', 'CPT', 'RT', 'RAVLT', 'CORSI_BWD',
            'PASAT', 'TMT', 'BNT', 'TOKEN', 'TOH', 'CUBE','CLOCK',
@@ -110,9 +110,10 @@ merged_datafile = x.CERAD_learning()
 merged_datafile = x.CERAD_recall()
 merged_datafile = x.CORSI_FWD()
 merged_datafile = x.FAS()
+merged_datafile = x.SDMT()
+merged_datafile = x.Stroop_index()
 
-
-tables2 = np.round(pd.pivot_table(merged_datafile,values=['age', 'edu', 'PSS10',
+tables2 = np.round(pd.pivot_table(bass_data,values=['age', 'edu', 'PSS10',
                                             'SMBQ', 'MADRS' ], index=['diagnosis', 'sex'],
                                   margins=True, margins_name='Total', aggfunc=['count', np.mean, np.std,np.min, np.max]), 2)
 tables2 = tables2.sort_index(axis=1, level=1, ascending=False).swaplevel(i=0, j=1, axis=1)
@@ -249,103 +250,103 @@ for columns in standardised:
 # For adjustment disorder creating a table with t-tests for parametric measures
 # and Wilcoxon signed rank for non-parametric measures
 
-standardised = standardised[standardised['diagnosis'] == 'AS']
-standardised = standardised.filter(regex='z$')
-standardised.apply(pd.to_numeric)
+# standardised = standardised[standardised['diagnosis'] == 'AS']
+# standardised = standardised.filter(regex='z$')
+# standardised.apply(pd.to_numeric)
 
-t_test = []
-for columns in standardised:
-        a = standardised[columns].dropna()
-        t_test.append(stats.ttest_1samp(a, 0, alternative='less'))
+# t_test = []
+# for columns in standardised:
+#         a = standardised[columns].dropna()
+#         t_test.append(stats.ttest_1samp(a, 0, alternative='less'))
 
-col = standardised.columns.tolist()
-t_test = pd.DataFrame(t_test, index = col)
+# col = standardised.columns.tolist()
+# t_test = pd.DataFrame(t_test, index = col)
 
-t_test.round(4)
+# t_test.round(4)
 
-t_test = t_test.rename(columns = {'statistic': 't_test_statistic'})
+# t_test = t_test.rename(columns = {'statistic': 't_test_statistic'})
 
-wilcoxon = []
+# wilcoxon = []
 
-t_test = t_test.reset_index()
+# t_test = t_test.reset_index()
 
-combined = t_test
-adcombined = combined.set_index('index').sort_index()
-adcombined = adcombined.reset_index()
+# combined = t_test
+# adcombined = combined.set_index('index').sort_index()
+# adcombined = adcombined.reset_index()
 
-adcombined['diagnosis'] = 'AD'
+# adcombined['diagnosis'] = 'AD'
 
-# For exhaustion disorder 
+# # For exhaustion disorder 
 
-standardised = merged_datafile
+# standardised = merged_datafile
 
-standardised = standardised[standardised['diagnosis'] == 'UT']
-standardised = standardised.filter(regex='z$')
-standardised.apply(pd.to_numeric)
+# standardised = standardised[standardised['diagnosis'] == 'UT']
+# standardised = standardised.filter(regex='z$')
+# standardised.apply(pd.to_numeric)
 
-t_test = []
-for columns in standardised:
-        a = standardised[columns].dropna()
-        t_test.append(stats.ttest_1samp(a, 0, alternative='less'))
+# t_test = []
+# for columns in standardised:
+#         a = standardised[columns].dropna()
+#         t_test.append(stats.ttest_1samp(a, 0, alternative='less'))
 
-col = standardised.columns.tolist()
-t_test = pd.DataFrame(t_test, index = col)
+# col = standardised.columns.tolist()
+# t_test = pd.DataFrame(t_test, index = col)
 
-t_test.round(4)
+# t_test.round(4)
 
-t_test = t_test.rename(columns = {'statistic': 't_test_statistic'})
+# t_test = t_test.rename(columns = {'statistic': 't_test_statistic'})
 
-wilcoxon = []
+# wilcoxon = []
 
-t_test = t_test.reset_index()
+# t_test = t_test.reset_index()
 
-combined = t_test
-utcombined = combined.set_index('index').sort_index()
+# combined = t_test
+# utcombined = combined.set_index('index').sort_index()
 
-utcombined = utcombined.reset_index()
-utcombined['diagnosis'] = 'UT'
+# utcombined = utcombined.reset_index()
+# utcombined['diagnosis'] = 'UT'
 
-#Combining AD and UT creating a unified table for both diagnosis
+# #Combining AD and UT creating a unified table for both diagnosis
 
-combiner = utcombined.merge(adcombined, how='outer')
-combiner = combiner.pivot_table(index='index', columns='diagnosis')
-combiner = combiner.swaplevel(axis=1).sort_index(axis=1)
+# combiner = utcombined.merge(adcombined, how='outer')
+# combiner = combiner.pivot_table(index='index', columns='diagnosis')
+# combiner = combiner.swaplevel(axis=1).sort_index(axis=1)
 
-#Retrieving descriptive statistics for the measures for each diagnosis
-standardised = merged_datafile
-mean_sd = standardised.pivot_table(values=['CERAD_learning_z','CERAD_recall_z','CORSI_FWD_z',
-                                    'FAS_z'], columns='diagnosis',aggfunc = ['count',np.mean, np.std])
+# #Retrieving descriptive statistics for the measures for each diagnosis
+# standardised = merged_datafile
+# mean_sd = standardised.pivot_table(values=['CERAD_learning_z','CERAD_recall_z','CORSI_FWD_z',
+#                                     'FAS_z'], columns='diagnosis',aggfunc = ['count',np.mean, np.std])
 
-mean_sd = mean_sd.swaplevel(axis=1).sort_index(axis=1)
-mean_sd = mean_sd.rename(columns={"AS": "AD"})
+# mean_sd = mean_sd.swaplevel(axis=1).sort_index(axis=1)
+# mean_sd = mean_sd.rename(columns={"AS": "AD"})
 
-#Merging all data together
+# #Merging all data together
 
-all_data = pd.merge(mean_sd, combiner, left_index=True,right_index=True)
-all_data = all_data.reset_index()
-all_data = all_data.sort_index(axis=1)
-all_data = all_data.rename(columns={'': 'TEST'})
-all_data = all_data.set_index('index','TEST')
-all_data = all_data.stack().round(4)
+# all_data = pd.merge(mean_sd, combiner, left_index=True,right_index=True)
+# all_data = all_data.reset_index()
+# all_data = all_data.sort_index(axis=1)
+# all_data = all_data.rename(columns={'': 'TEST'})
+# all_data = all_data.set_index('index','TEST')
+# all_data = all_data.stack().round(4)
 
-orderlist = [  
-              (('CERAD_learning_z',), 'count'), (('CERAD_learning_z',), 'mean'), (('CERAD_learning_z',), 'std'),
- (('CERAD_learning_z',), 't_test_statistic'),  (('CERAD_learning_z',), 'pvalue'),
-    (('CERAD_recall_z',), 'count'), (('CERAD_recall_z',), 'mean'),
- (('CERAD_recall_z',), 'std'), 
- (('CERAD_recall_z',), 't_test_statistic'), 
-     (('CERAD_recall_z',), 'pvalue'),           
+# orderlist = [  
+#               (('CERAD_learning_z',), 'count'), (('CERAD_learning_z',), 'mean'), (('CERAD_learning_z',), 'std'),
+#  (('CERAD_learning_z',), 't_test_statistic'),  (('CERAD_learning_z',), 'pvalue'),
+#     (('CERAD_recall_z',), 'count'), (('CERAD_recall_z',), 'mean'),
+#  (('CERAD_recall_z',), 'std'), 
+#  (('CERAD_recall_z',), 't_test_statistic'), 
+#      (('CERAD_recall_z',), 'pvalue'),           
 
- (('CORSI_FWD_z',), 'count'), (('CORSI_FWD_z',), 'mean'),
- (('CORSI_FWD_z',), 'std'),
- (('CORSI_FWD_z',), 't_test_statistic'),
-    (('CORSI_FWD_z',), 'pvalue'),
-             (('FAS_z',), 'count'),
- (('FAS_z',), 'mean'), (('FAS_z',), 'std'),
- (('FAS_z',), 't_test_statistic'), (('FAS_z',), 'pvalue')
-]
+#  (('CORSI_FWD_z',), 'count'), (('CORSI_FWD_z',), 'mean'),
+#  (('CORSI_FWD_z',), 'std'),
+#  (('CORSI_FWD_z',), 't_test_statistic'),
+#     (('CORSI_FWD_z',), 'pvalue'),
+#              (('FAS_z',), 'count'),
+#  (('FAS_z',), 'mean'), (('FAS_z',), 'std'),
+#  (('FAS_z',), 't_test_statistic'), (('FAS_z',), 'pvalue')
+# ]
 
-all_data = all_data.reindex(orderlist)
+# all_data = all_data.reindex(orderlist)
 
 # all_data.style
 
@@ -368,3 +369,6 @@ all_data = all_data.reindex(orderlist)
 
 # all_data
 
+# merged_datafile.head().to_csv('for_wobbie_100522.csv')
+
+# merged_datafile.to_csv('ludwig-victoria100522.csv', encoding='UTF-8-sig')

@@ -3,7 +3,7 @@
 Mindmore standardization script for:
     1. CERAD Learning
     2. CERAD recall
-    3. STROOP
+    3. STROOP Index
     4. FAS
     5. SDMT
 
@@ -21,6 +21,7 @@ class mindmore_standardiser:
         self.df['age2'] = self.df['age']**2
         self.df['ageEdu'] = self.df['age']*self.df['edu']
         self.df['sex'].replace({'man':1, 'woman':0}, inplace=True)
+        self.df['GENERAL_inputDevice'].replace({'mouse':0, 'trackpad':1}, inplace=True)
 
 
     def CERAD_learning(self):
@@ -67,5 +68,88 @@ class mindmore_standardiser:
         
         df = self.df
         return df
+
+    def SDMT(self):
+        
+        def sdmt_standardizer(row):
+            """
+            Additional function in order to determine what model to standardize
+            by
+            
+            
+            """
+            if row['GENERAL_inputDevice'] == 1:
+                SDMT_PREDICTED = 68.931 + \
+                (-4.441 * row['GENERAL_inputDevice']) + \
+                (-0.477 * row['age']) + \
+                    (1.656 * row['sex'])
+                SD = 6.615                                
+                
+                return (row['SDMT_CORRECT'] - SDMT_PREDICTED) / SD
+                           
+
+
+            if row['GENERAL_inputDevice'] == 0:
+                SDMT_PREDICTED = 68.931 + \
+                (-4.441 * row['GENERAL_inputDevice']) + \
+                (-0.477 * row['age']) + \
+                    (1.656 * row['sex'])
+                SD = 6.615                                
+                
+                return (row['SDMT_CORRECT'] - SDMT_PREDICTED) / SD
+        
+            elif row['GENERAL_inputDevice'] == 'touchscreen':
+                SDMT_PREDICTED = 56.046 + (-0.062 * row['age']) + \
+                    (-0.005 * row['age2']) + (0.554 * row['edu'])
+                SD = 6.888
+                
+                return (row['SDMT_CORRECT'] - SDMT_PREDICTED) / SD
+
+
+            
+
+        self.df['SDMT_z'] = self.df.apply(lambda row: sdmt_standardizer(row), axis=1)
+        df = self.df
+        return df
+    
+    def Stroop_index(self):
+
+        def Stroop_standardizer(row):
+            """
+            Additional function in order to determine what model to standardize
+            by
+            
+            
+            """
+            if row['GENERAL_inputDevice'] == 1:
+                Stroop_PREDICTED = 20.994 + \
+                (-1.929 * row['GENERAL_inputDevice']) + \
+                (-0.147 * row['age'])
+                SD = 2.395                                
+                
+                return (row['STROOP_INDEX'] - Stroop_PREDICTED) / SD
+                           
+            if row['GENERAL_inputDevice'] == 0:
+                Stroop_PREDICTED = 20.994 + \
+                (-1.929 * row['GENERAL_inputDevice']) + \
+                (-0.147 * row['age'])
+                SD = 2.395                                
+                
+                return (row['STROOP_INDEX'] - Stroop_PREDICTED) / SD
+        
+            elif row['GENERAL_inputDevice'] == 'touchscreen':
+                Stroop_PREDICTED = 18.268 + (-0.117 * row['age'])
+                SD = 2.770
+                
+                return (row['STROOP_INDEX'] - Stroop_PREDICTED) / SD
+
+
+            
+
+        self.df['Stroop_index_z'] = self.df.apply(lambda row: Stroop_standardizer(row), axis=1)
+        df = self.df
+        return df
+    
+                
 
         

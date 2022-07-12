@@ -1,18 +1,25 @@
-"""
-This script was created in order to prepare file for data analysis for cross sectional
-study of cognition in patients with stress related mental disorders compared to
-Mindmore normative data. 
+#!/usr/bin/env python
+# coding: utf-8
 
-In order for it to work we need data from three different sources:
-    1. Test data from Mindmore
-    2. Tracking of who did PRE and POST tests
-    3. Demographic information from BASS for standardization
-    
-    Furthermore we need normative models from MM paper as well as updated norms
-    for SDMT and Stroop. Currently in seperate script (mindmore_standardisation.py)
+# # ICBTTAU - Data cleaning and visualization
 
+# This script was created in order to prepare file for data analysis for cross sectional
+# study of cognition in patients with stress related mental disorders compared to
+# Mindmore normative data. 
+# 
+# In order for it to work we need data from three different sources:
+# 
+#     1. Test data from Mindmore
+#     2. Tracking of who did PRE and POST tests
+#     3. Demographic information from BASS for standardization
+#     
+# Furthermore we need normative models from MM paper as well as updated norms for SDMT and Stroop. Currently in seperate script (mindmore_standardisation.py)
+# 
 
-"""
+# ## Importing the necessary files
+
+# In[106]:
+
 
 import pandas as pd
 import numpy as np
@@ -21,9 +28,14 @@ from scipy import stats
 import seaborn as sns
 from test_occasion_calculator import what_test_occassion
 from mindmore_standardisation import mindmore_standardiser
+import datetime
 
-
+# ## Getting the data from Mindmore
+# 
 # Let's start of by importing the test data from Mindmore and getting the columns we need
+
+# In[107]:
+
 
 test_data = pd.read_csv('ICBTTAU data 10-5-22.csv')
 
@@ -43,14 +55,35 @@ test_data = test_data[test_data['GENERAL_completedAtTime'].notnull()]
 #Getting the occasion for test
 test_data = what_test_occassion(test_data)
 
-#Finally standardizing the pseudonym column
-test_data.rename(columns={'GENERAL_pseudonym':'code'}, inplace=True)
-
 #For this analysis we're only interested in the PRE data.
 test_data = test_data[test_data['test_or_retest'] == 't1']
 
+#Finally changing the name of the pseudonym column
+test_data.rename(columns={'GENERAL_pseudonym':'code'}, inplace=True)
+
 test_data_columns = test_data.columns
-###############################################################################
+
+print(round(test_data.describe(), 2))
+
+x = test_data['PATIENT_willDoAgain'].value_counts().sort_index()
+print(x)
+x.to_frame().T.plot.barh(stacked=True, color = {1.0:'r', 2.0:'tab:orange', 3.0:'y', 4:'b',5:'g'})
+
+# labels for x & y axis
+ 
+# title of plot
+plt.title('Would you do the test again if asked by your healthcare provider? 0-5')
+
+plt.show()
+
+test_data['GENERAL_inputDevice'].value_counts()
+
+
+# ## Let's do the same for data retrieved from our online therapy management system
+# 
+# 
+
+# In[108]:
 
 
 # Now let's do the same for BASS data
@@ -61,7 +94,7 @@ bass_columns = bass_data.columns
 
 bass_data = bass_data[['Participant Id', 'ICBTvsTAU-DemV_1a_SCREEN',
                        'ICBTvsTAU-DemV_1b_SCREEN', 'ICBTvsTAU-DemV_3_SCREEN',
-                       'KLIN_5d_SCREEN', 'SMBQ_sum18_Förmätn', 'PSS10_sum_Förmätn',
+                       'KLIN_5d_SCREEN', 'Comorbidity', 'SMBQ_sum18_Förmätn', 'PSS10_sum_Förmätn',
                        'ICBTvsTAU MADRS_sum_Förmätn']]
 
 bass_data.rename(columns={'ICBTvsTAU-DemV_1a_SCREEN':'YOB', 'ICBTvsTAU-DemV_1b_SCREEN':'sex',
@@ -80,12 +113,38 @@ bass_data['sex'] = bass_data['sex'].str.replace('M','man')
 
 bass_data['age'] = 2022 - bass_data['YOB']
 
-#By looking at this data we can see that we have 285 included participants in the
-# study
+#By looking at this data we can see that we have 285 included participants in the study
+round(bass_data.describe(), 2)
 
-###############################################################################
+#Getting comorbidity data
 
-#Finally we'll have a look at the tracking data. 
+x = bass_data['Comorbidity'].str.split(',').explode().unique().tolist()
+res = []
+for ele in x:
+    if ele == ele:      
+        j = ele.replace(' ', '')
+        res.append(j)
+        
+x = res
+
+Comorb = {}
+
+for ele in x:
+    Comorb[ele] = bass_data.Comorbidity.str.count(ele).sum()
+
+print(Comorb)
+
+Comorb = pd.DataFrame.from_dict(Comorb, orient='index')
+Comorb.rename(columns={0:'Count'}, inplace=True)
+
+Comorb.to_csv('Comorbidity220712.csv')
+
+# ## Finally we'll have a look at the tracking data 
+# 
+# This dataframe was created in order to have an overview of cognitive test status and we need it to make sure that we don't get any participants in our file that didn't to the first test but only the second
+
+# In[109]:
+
 
 status_data = pd.read_csv('Study cohort tracking.csv')
 
@@ -95,14 +154,26 @@ status_data.rename(columns={'registreringskod':'code'}, inplace=True)
 #For this analysis we're only interested in the PRE data.
 status_data = status_data[status_data['Status_1'] == 'Genomfört']
 
-###############################################################################
 
-# Let us now merge these three files together into one
+# ## Now we're merging these three files together using the 'code' column for matching
+
+# In[110]:
+
 
 merged_datafile = bass_data.merge(test_data, on='code',
                 how='left').merge(status_data, on='code', how='inner')
 
 columns_merged_datafile = merged_datafile.columns
+
+merged_datafile['age'] = pd.to_numeric(merged_datafile['GENERAL_startedAtDate'].str[:4]) - \
+merged_datafile['YOB']
+
+
+
+
+# ## Standardization using seperate script
+
+# In[111]:
 
 
 x = mindmore_standardiser(merged_datafile)
@@ -112,6 +183,12 @@ merged_datafile = x.CORSI_FWD()
 merged_datafile = x.FAS()
 merged_datafile = x.SDMT()
 merged_datafile = x.Stroop_index()
+
+
+# ## Let's pull up some descriptive statistics
+
+# In[112]:
+
 
 tables2 = np.round(pd.pivot_table(bass_data,values=['age', 'edu', 'PSS10',
                                             'SMBQ', 'MADRS' ], index=['diagnosis', 'sex'],
@@ -149,8 +226,16 @@ tables2.style.background_gradient()
 
 print(tables2)
 
+
+# ## And some graphs to visualize data distributions using ECDF
+
+# In[113]:
+
+
 # import seaborn as sns
 plt.style.use('seaborn')
+plt.rcParams["font.family"] = "Times New Roman"
+
 
 "ECDF function"
 def ecdf(data):
@@ -174,7 +259,9 @@ def EDA(data):
         x = np.sort(data)
         y = np.arange(1, len(x)+1) / len(x)
         return(x, y)
-     
+    
+    table_count = 1.1
+
     for columns in standardised:
         
         "Drop NA"
@@ -211,17 +298,25 @@ def EDA(data):
         percentiles = np.array([25, 50, 75])
         percs = [0.25, 0.5, 0.75]
         perc_val = np.percentile(a, percentiles)
-        print("percentiles=", perc_val)
         plt.plot(perc_val, percs, marker='o', linestyle='none', color='red')
-
+        
+        z = 0
+        percentiles = ['25th percentile', '50th percentile', '75th percentile']
+        for x in percs:
+            y = perc_val[z]
+            percentile_count = percentiles[z]
+            plt.text(y+0.3, x, percentile_count)
+            z = z + 1
         
         "Display labels, set margins, ticks, show plot"
         plt.xlabel('Z scores')
         plt.ylabel('ECDF')
-        plt.title(str(columns))
+        plt.title("Figure "+str(table_count)+" Distribution of scores for "+columns, loc='left')
+
         plt.margins(0.02)
-        plt.xticks([-4, -3, -2, -1, 0, 1, 2, 3, 4])
+        plt.xticks([-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5])
         plt.legend()
+        table_count = round(table_count + 0.1, 1)
         plt.show()
         
 EDA(merged_datafile)
@@ -231,17 +326,92 @@ standardised = standardised.filter(regex='z$')
 standardised.apply(pd.to_numeric)
 standardised = standardised.join(merged_datafile['diagnosis'])
 
+merged_datafile.loc[merged_datafile["sex"] == 1, "sex"] = "men"
+merged_datafile.loc[merged_datafile["sex"] == 0, "sex"] = "women"
+
+merged_datafile.loc[merged_datafile["diagnosis"] == 'AS', "diagnosis"] = "Adjustment disorder"
+merged_datafile.loc[merged_datafile["diagnosis"] == 'UT', "diagnosis"] = "Exhaustion disorder"
+
+
 # standardised = standardised.drop(['StroopInhibition_z',
 #        'StroopWord_time_z', 'StroopWCorr_z', 'StroopColourWord_time_z',
 #        'StroopWCcorr_z'], axis=1)
 
+table_count = 2.1
+
 for columns in standardised:
-    
     try: 
-        sns.violinplot(x='diagnosis', y=columns, data=standardised)
+        
+        ax = sns.violinplot(x = merged_datafile['diagnosis'], y= columns, hue=merged_datafile['sex'],
+                       data = merged_datafile, split=True, palette=['r','b'])
+        
+        ax.set_title("Figure "+str(table_count)+" Distribution of scores for "+columns, loc='left')
+        ax.set(ylabel='Z-scores')
+        table_count = round(table_count +0.1, 1)
         plt.show()
+        
     except:
         continue
+
+
+
+
+# # Let's also make a table for the cognitive test scores
+
+# In[115]:
+
+
+merged_datafile.info()
+
+merged_datafile['FAS_z'].fillna(float(merged_datafile['FAS_z'].mean()), inplace=True)
+
+
+cognitiveTestTable = np.round(pd.pivot_table(merged_datafile,values=['CERAD_learning_z', 'CERAD_recall_z', 'CORSI_FWD_z',
+                                            'FAS_z', 'SDMT_z', 'Stroop_index_z'], index=['diagnosis', 'sex'],
+                                  margins=True, margins_name='Total', aggfunc=['count', np.mean, np.std,np.min, np.max]), 2)
+cognitiveTestTable = cognitiveTestTable.sort_index(axis=1, level=1, ascending=False).swaplevel(i=0, j=1, axis=1)
+cognitiveTestTable = cognitiveTestTable.round(2)
+
+cols = cognitiveTestTable.columns.tolist()
+
+#Make into string to create range row
+cognitiveTestTable = cognitiveTestTable.astype(str)
+
+#Creating a range column for min and max values
+
+cognitiveTestTable['CERAD_learning_z', 'range'] = cognitiveTestTable['CERAD_learning_z', 'amin']                 + "-" + cognitiveTestTable['CERAD_learning_z', 'amax']
+cognitiveTestTable['CERAD_recall_z', 'range'] = cognitiveTestTable['CERAD_recall_z', 'amin']                 + "-" + cognitiveTestTable['CERAD_recall_z', 'amax']
+cognitiveTestTable['CORSI_FWD_z', 'range'] = cognitiveTestTable['CORSI_FWD_z', 'amin']                 + "-" + cognitiveTestTable['CORSI_FWD_z', 'amax']
+cognitiveTestTable['FAS_z', 'range'] = cognitiveTestTable['FAS_z', 'amin'] + "-" + cognitiveTestTable['FAS_z', 'amax']
+cognitiveTestTable['SDMT_z', 'range'] = cognitiveTestTable['SDMT_z', 'amin'] + "-" + cognitiveTestTable['SDMT_z', 'amax']
+cognitiveTestTable['Stroop_index_z', 'range'] = cognitiveTestTable['Stroop_index_z', 'amin']                 + "-" + cognitiveTestTable['Stroop_index_z', 'amax']
+
+
+
+#Getting the rows we're interested in, in the correct order
+
+cognitiveTestTable = cognitiveTestTable[[('CERAD_learning_z', 'count'),('CERAD_learning_z', 'mean')
+                                         ,('CERAD_learning_z', 'std'),('CERAD_learning_z', 'range'),
+('CERAD_recall_z', 'mean'),('CERAD_recall_z', 'std'),('CERAD_recall_z', 'range'),
+('CORSI_FWD_z', 'mean'),('CORSI_FWD_z', 'std'),('CORSI_FWD_z', 'range'),
+('FAS_z', 'mean'),('FAS_z', 'std'),('FAS_z', 'range'),
+('SDMT_z', 'mean'),('SDMT_z', 'std'),('SDMT_z', 'range'),
+                                        ('Stroop_index_z', 'mean'),('Stroop_index_z', 'std'),('Stroop_index_z', 'range')]]
+
+cognitiveTestTable = cognitiveTestTable.transpose()
+
+#Experimenting with some styling
+
+cognitiveTestTable.style
+cognitiveTestTable.style.set_precision(2)
+cognitiveTestTable.style.background_gradient()
+
+print(cognitiveTestTable)
+
+
+# ## Inferential statistics when we are ready
+
+# In[114]:
 
 
 ###############################################################################
@@ -369,6 +539,4 @@ for columns in standardised:
 
 # all_data
 
-# merged_datafile.head().to_csv('for_wobbie_100522.csv')
 
-# merged_datafile.to_csv('ludwig-victoria100522.csv', encoding='UTF-8-sig')
